@@ -43,7 +43,9 @@
             "allowedValues": [
                 "Windows-10-Enterprise-multi-session-with-Office-365-ProPlus",
                 "Windows-10-Enterprise-multi-session",
-                "2016-Datacenter"
+                "2016-Datacenter",
+                "2012-R2-Datacenter",
+                "2019-Datacenter"
             ],
             "defaultValue": "Windows-10-Enterprise-multi-session-with-Office-365-ProPlus"
         },
