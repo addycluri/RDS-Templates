@@ -43,13 +43,14 @@
         "rdshVMDiskType": {
             "type": "string",
             "allowedValues": [
-                "SSD",
-                "HDD"
+                "Premium_LRS",
+                "StandardSSD_LRS",
+                "Standard_LRS"
             ],
             "metadata": {
-                "description": "The VM disk type for the VM: HDD or SSD."
+                "description": "The VM disk type for the VM: Premium_LRS (Default), Standard_LRS or StandardSSD_LRS."
             },
-            "defaultValue": "SSD"
+            "defaultValue": "Premium_LRS"
         },
         "rdshVmSize": {
             "type": "string",
@@ -109,6 +110,13 @@
             "metadata": {
                 "description": "Location for all resources to be created in."
             }
+        },
+        "enablePersistentDesktop": {
+            "type": "bool",
+            "metadata": {
+                "description": "Set this parameter to true if you would like to enable Persistent Desktop experience. Defaults to false."
+            },
+            "defaultValue": false
         }
     },
     "variables": {
@@ -116,7 +124,10 @@
         "galleryOffer": "[if( equals(parameters('rdshGalleryImageSKU'), 'Windows-10-Enterprise-multi-session'), 'Windows-10',  if(equals(parameters('rdshGalleryImageSKU'), 'Windows-10-Enterprise-multi-session-with-Office-365-ProPlus'), 'office-365', 'WindowsServer'))]",
         "gallerySku": "[if( equals(parameters('rdshGalleryImageSKU'), 'Windows-10-Enterprise-multi-session'), 'rs5-evd',   if(equals(parameters('rdshGalleryImageSKU'), 'Windows-10-Enterprise-multi-session-with-Office-365-ProPlus'), 'rs5-evd-o365pp', parameters('rdshGalleryImageSKU')))]",
         "storageAccountName": "[split( split( parameters('VmImageVhdUri'), '/')[2], '.' )[0]]",
-        "storageaccount": "[concat(resourceId(parameters('storageAccountResourceGroupName'),'Microsoft.Storage/storageAccounts',variables('storageAccountName')))]"
+        "storageaccount": "[concat(resourceId(parameters('storageAccountResourceGroupName'),'Microsoft.Storage/storageAccounts',variables('storageAccountName')))]",
+        "availabilitySetId": {
+            "id": "[if(equals(parameters('enablePersistentDesktop'),bool('False')),resourceId('Microsoft.Compute/availabilitySets/', concat(parameters('rdshPrefix'), 'availabilitySet')),json('null'))]"
+        }
     },
     "resources": [
         {
@@ -159,9 +170,7 @@
                 "hardwareProfile": {
                     "vmSize": "[parameters('rdshVmSize')]"
                 },
-                "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets/', concat(parameters('rdshPrefix'), 'availabilitySet'))]"
-                },
+                "availabilitySet": "[if(equals(parameters('enablePersistentDesktop'),bool('False')),variables('availabilitySetId'),json('null'))]",
                 "osProfile": {
                     "computerName": "[concat(parameters('rdshPrefix'), copyindex())]",
                     "adminUsername": "[parameters('existingDomainUsername')]",
@@ -177,7 +186,7 @@
                     "osDisk": {
                         "createOption": "FromImage",
                         "vhd": {
-                            "uri": "[concat(reference(variables('storageaccount'), '2016-01-01').primaryEndpoints.blob, parameters('vhds'), copyindex(), '-osdisk.vhd')]"
+                            "uri": "[concat(reference(variables('storageaccount'), '2018-11-01').primaryEndpoints.blob, parameters('vhds'), copyindex(), '-osdisk.vhd')]"
                         },
                         "name": "[concat(parameters('rdshPrefix'), copyindex(),'-osDisk')]"
                     }
@@ -191,8 +200,7 @@
                 },
                 "diagnosticsProfile": {
                     "bootDiagnostics": {
-                        "enabled": "[equals(parameters('rdshVMDiskType'), 'HDD')]",
-                        "storageUri": "[reference(variables('storageaccount'), '2016-01-01').primaryEndpoints.blob]"
+                        "enabled": false
                     }
                 },
                 "licenseType": "Windows_Client"
